@@ -6,62 +6,65 @@ import { NewMessage, NewMessageEvent } from "telegram/events";
 
 @Injectable()
 export class TelegramService implements OnModuleInit {
-  private client: TelegramClient;
-  private readonly logger = new Logger(TelegramService.name);
+    private client: TelegramClient;
+    private readonly logger = new Logger(TelegramService.name);
 
-  constructor(private configService: ConfigService) {}
+    constructor(private configService: ConfigService) { }
 
-  async onModuleInit() {
-    const apiId = Number(this.configService.get("TELEGRAM_API_ID"));
-    const apiHash = this.configService.get<string>("TELEGRAM_API_HASH");
-    const sessionString = this.configService.get<string>("TELEGRAM_STRING_SESSION");
+    async onModuleInit() {
+        const apiId = Number(this.configService.get("TELEGRAM_API_ID"));
+        const apiHash = this.configService.get<string>("TELEGRAM_API_HASH");
+        const sessionString = this.configService.get<string>("TELEGRAM_STRING_SESSION");
 
-    this.client = new TelegramClient(
-      new StringSession(sessionString),
-      apiId,
-      apiHash!,
-      { connectionRetries: 5 }
-    );
+        this.client = new TelegramClient(
+            new StringSession(sessionString),
+            apiId,
+            apiHash!,
+            { connectionRetries: 5 }
+        );
 
-    await this.client.connect();
-    this.logger.log("Telegram userbot ulandi ✅");
+        await this.client.connect();
+        this.logger.log("Telegram userbot ulandi ✅");
 
-    this.listenForMessages();
-  }
+        this.listenForMessages();
+    }
 
-  private listenForMessages() {
-    this.client.addEventHandler(
-      async (event: NewMessageEvent) => {
-        const message = event.message;
+    private listenForMessages() {
+        this.client.addEventHandler(
+            async (event: NewMessageEvent) => {
+                const message = event.message;
 
-        if (!message.isPrivate) return;
-        if (message.out) return;
+                if (!message.isPrivate) return;
+                if (message.out) return;
 
-        const sender = await message.getSender() as any;
+                const sender = await message.getSender() as any;
 
-        const isContact = sender?.contact === true;
-        const firstName = sender?.firstName as string | undefined;
+                // Bot xabarlarini ignore qilish
+                if (sender?.bot === true) return;
 
-        let reply: string;
+                const isContact = sender?.contact === true;
+                const firstName = sender?.firstName as string | undefined;
 
-        if (isContact && firstName) {
-          reply = `Assalomu alaykum, ${firstName}! 👋 Men Bunyodbekning yordamchi botiman. Hozir u band, lekin xabaringiz yetib bordi — online bo'lishlari bilan albatta javob qaytaradilar 🙂`;
-        } else {
-          reply = `Assalomu alaykum! 👋 Men Bunyodbekning yordamchi botiman. Hozir u band bo'lishi mumkin. Ismingizni va xabaringizni yozib qoldirsangiz, ko'rishlari bilan javob beradilar 🙂`;
-        }
+                let reply: string;
 
-        this.logger.log(`Xabar: ${firstName ?? "Noma'lum"} — "${message.text}"`);
+                if (isContact && firstName) {
+                    reply = `Assalomu alaykum, ${firstName}! 👋 Men Bunyodbekning yordamchi botiman. Hozir u band, lekin xabaringiz yetib bordi — online bo'lishlari bilan albatta javob qaytaradilar 🙂`;
+                } else {
+                    reply = `Assalomu alaykum! 👋 Men Bunyodbekning yordamchi botiman. Hozir u band bo'lishi mumkin. Ismingizni va xabaringizni yozib qoldirsangiz, ko'rishlari bilan javob beradilar 🙂`;
+                }
 
-        await this.sleep(1000 + Math.random() * 1000);
+                this.logger.log(`Xabar: ${firstName ?? "Noma'lum"} — "${message.text}"`);
 
-        await message.reply({ message: reply });
-        this.logger.log(`Javob yuborildi ✅`);
-      },
-      new NewMessage({ incoming: true })
-    );
-  }
+                await this.sleep(1000 + Math.random() * 1000);
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
+                await message.reply({ message: reply });
+                this.logger.log(`Javob yuborildi ✅`);
+            },
+            new NewMessage({ incoming: true })
+        );
+    }
+
+    private sleep(ms: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
 }
